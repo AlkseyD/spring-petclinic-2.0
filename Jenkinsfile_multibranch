@@ -1,0 +1,14 @@
+pipeline {
+    agent {
+        label 'Linux-Node'
+    }
+    stages{    
+        stage('Dockerfile Linting') {
+            steps {
+                sh 'chmod +x linter.sh'
+                sh 'ls -l'                
+                sh './linter.sh Dockerfile'
+            }
+        }
+    }    
+}

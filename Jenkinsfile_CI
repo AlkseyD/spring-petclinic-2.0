@@ -1,0 +1,50 @@
+pipeline {
+    agent {
+        label 'Linux-Node'
+    }
+    stages {
+        stage('Test Build') {
+            agent {
+                docker { 
+                    image 'openjdk:11'
+                    label 'Linux-Node' 
+                }     
+            }
+            steps {
+                sh 'chmod +x mvnw'
+                sh './mvnw package -Dcheckstyle.skip'
+            }
+        }
+        stage('SonarQube Analysis') {
+            tools { 
+                maven 'M3' 
+            }
+            environment {
+                scannerHome = tool 'Sonarqubesc'
+            }
+            steps {
+                withSonarQubeEnv('SonarNode') {
+                    sh 'chmod +x mvnw'
+                    sh 'mvn clean verify -Dcheckstyle.skip sonar:sonar -Dsonar.projectKey=andrii_kurapov_cicd-task_AX66wMVlbWQSwbxPF1UC'
+                }
+            }
+        }    
+        stage('Test-Static') {
+            steps {
+                sh 'chmod +x mvnw'
+                sh './mvnw package -Dcheckstyle.skip'
+                sh 'docker build -f ./Dockerfile -t andriikurapov/petclinic:$BUILD_NUMBER -t andriikurapov/petclinic:latest .'
+            }
+        }
+        stage('Push to DockerHub') {
+            environment {
+                DOCKERHUB_CREDENTIALS=credentials('095f0c4a-095a-4fe3-9785-7ada184f4c2a')
+            }
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                sh 'docker push andriikurapov/petclinic:latest'
+                sh 'docker push andriikurapov/petclinic:$BUILD_NUMBER'        
+            }
+        }
+    }
+}
