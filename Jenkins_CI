@@ -1,0 +1,46 @@
+pipeline {
+    agent {
+        label 'slavik'
+    }
+    stages {
+        stage('Clone') {
+            steps {
+                sh """ 
+                    #!/bin/bash
+                    git clone https://github.com/AlkseyD/spring-petclinic-2.0.git || true
+                    ls -l spring-petclinic-2.0
+                    """ 
+                    //./mvnw package -Dcheckstyle.skip
+            }
+        }
+        stage('Maven build') {
+            steps {
+                sh """ 
+                    #!/bin/bash
+                    cd spring-petclinic-2.0
+                    chmod +x mvnw
+                    ./mvnw package -Dcheckstyle.skip
+                    """ 
+            }
+        }
+        stage('Docker build') {
+            steps {
+                sh """ 
+                    #!/bin/bash
+                    cd spring-petclinic-2.0
+                    docker build -f Dockerfile -t duckser/forcicd:$BUILD_NUMBER -t duckser/forcicd:latest .
+                    """ 
+            }
+        }
+        stage('Push to DockerHub') {
+            environment {
+                DOCKERHUB_CREDENTIALS=credentials('hub.docker.com')
+            }
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                sh 'docker push duckser/forcicd:latest'
+                sh 'docker push duckser/forcicd:$BUILD_NUMBER'        
+            }
+        }
+    } 
+}
