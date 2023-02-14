@@ -1,0 +1,30 @@
+pipeline {
+    agent {
+        label 'slavik'
+    }
+    stages {
+        stage('Deploy to environment') {
+            steps {
+                script {
+                    sh "docker pull duckser/forcicd:latest || true"
+                    sh "docker run -it -d --name petclinic -p 8000:8080 duckser/forcicd:latest"
+                    sleep 20
+                }
+                
+                
+            }
+        }
+        stage('Healthcheck') {
+            steps{
+                script {
+                    if (env.ENVIRONMENT == "Dev") {
+                    sh "curl -sSf http://localhost:8000/"
+                    }
+                    if (env.ENVIRONMENT == "QA") {
+                    sh "curl -sSf http://localhost:7000/"
+                    }
+                }
+            }
+        }
+    }
+}
